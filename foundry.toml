@@ -1,0 +1,17 @@
+[profile.default]
+src = 'contracts'
+test = 'tests'
+out = 'out'
+script = 'scripts'
+libs = ['lib']
+solc_version = '0.8.20'
+build_info = true
+extra_output = ["storageLayout"]
+
+[invariant]
+runs = 1
+depth = 1
+dictionary_weight = 20
+fail_on_revert = true
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

@@ -1,0 +1,31 @@
+# Compiler files
+cache/
+out/
+bin/
+
+# Ignores development broadcast logs
+*broadcast
+
+# Docs
+docs/
+
+# Coverage files
+lcov.info
+
+# Abi files
+abi/*
+abis/*
+
+# Ide config
+.vscode/*
+.vscode
+
+# Node
+node_modules/
+
+# Random
+*.DS_STORE
+
+
+# Env
+.env
