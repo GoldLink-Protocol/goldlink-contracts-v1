@@ -3,13 +3,8 @@
 pragma solidity 0.8.20;
 
 import {
-    IChainlinkAdapter
-} from "../../../adapters/chainlink/interfaces/IChainlinkAdapter.sol";
-import {
     IGmxFrfStrategyManager
 } from "../interfaces/IGmxFrfStrategyManager.sol";
-import { IGmxV2MarketTypes } from "../interfaces/gmx/IGmxV2MarketTypes.sol";
-import { IGmxV2PriceTypes } from "../interfaces/gmx/IGmxV2PriceTypes.sol";
 import { OrderLogic } from "../libraries/OrderLogic.sol";
 import { GmxFrfStrategyErrors } from "../GmxFrfStrategyErrors.sol";
 
