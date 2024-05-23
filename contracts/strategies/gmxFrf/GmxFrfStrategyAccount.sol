@@ -3,10 +3,7 @@
 pragma solidity 0.8.20;
 
 import { StrategyAccount } from "../../core/StrategyAccount.sol";
-import { IStrategyBank } from "../../interfaces/IStrategyBank.sol";
-import { StrategyBankHelpers } from "../../libraries/StrategyBankHelpers.sol";
 import { IStrategyController } from "../../interfaces/IStrategyController.sol";
-import { IStrategyAccount } from "../../interfaces/IStrategyAccount.sol";
 import {
     IGmxFrfStrategyManager
 } from "./interfaces/IGmxFrfStrategyManager.sol";
@@ -17,12 +14,6 @@ import {
     IGmxV2OrderTypes
 } from "../../lib/gmx/interfaces/external/IGmxV2OrderTypes.sol";
 import { GmxFrfStrategyErrors } from "./GmxFrfStrategyErrors.sol";
-import {
-    IGmxV2OrderCallbackReceiver
-} from "../../lib/gmx/interfaces/external/IGmxV2OrderCallbackReceiver.sol";
-import {
-    IGmxV2RoleStore
-} from "../../strategies/gmxFrf/interfaces/gmx/IGmxV2RoleStore.sol";
 import {
     IGmxV2EventUtilsTypes
 } from "../../lib/gmx/interfaces/external/IGmxV2EventUtilsTypes.sol";
@@ -35,6 +26,7 @@ import { SwapCallbackLogic } from "./libraries/SwapCallbackLogic.sol";
 import { OrderLogic } from "./libraries/OrderLogic.sol";
 import { ClaimLogic } from "./libraries/ClaimLogic.sol";
 import { WithdrawalLogic } from "./libraries/WithdrawalLogic.sol";
+import { MulticallChecks } from "./libraries/MulticallChecks.sol";
 
 /**
  * @title GmxFrfStrategyAccount
@@ -64,14 +56,11 @@ contract GmxFrfStrategyAccount is
     /// @notice Ensure that `msg.value` is greater than or equal to the provided execution fee.
     /// This will not properly validate functions called via multicall, so additional logic must be used.
     modifier canPayFee(uint256 fee) {
-        require(
-            fee <= msg.value,
-            GmxFrfStrategyErrors.MSG_VALUE_LESS_THAN_PROVIDED_EXECUTION_FEE
-        );
+        _canPayFee(fee);
         _;
     }
 
-    /// @dev Require address is not zero.
+    /// @notice Require address is not zero.
     modifier onlyNonZeroAddress(address addressToCheck) {
         _onlyNonZeroAddress(addressToCheck);
         _;
@@ -625,7 +614,8 @@ contract GmxFrfStrategyAccount is
                 data[i]
             );
 
-            MulticallChecks.checkMulticallResult(success, result);
+
+            MulticallChecks.verifyResult(success, result);
 
             results[i] = result;
         }
@@ -750,6 +740,20 @@ contract GmxFrfStrategyAccount is
             MANAGER.gmxV2RoleStore().hasRole(msg.sender, Role.CONTROLLER),
             GmxFrfStrategyErrors
                 .GMX_FRF_STRATEGY_ORDER_CALLBACK_RECEIVER_CALLER_MUST_HAVE_CONTROLLER_ROLE
+        );
+    }
+
+    function _canPayFee(uint256 fee) internal view {
+        require(
+            fee <= msg.value,
+            GmxFrfStrategyErrors.MSG_VALUE_LESS_THAN_PROVIDED_EXECUTION_FEE
+        );
+    }
+
+    function _onlyNonZeroAddress(address addressToCheck) internal pure {
+        require(
+            addressToCheck != address(0),
+            GmxFrfStrategyErrors.ZERO_ADDRESS_IS_NOT_ALLOWED
         );
     }
 

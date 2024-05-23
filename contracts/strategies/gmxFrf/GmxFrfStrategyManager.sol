@@ -20,9 +20,6 @@ import {
     IChainlinkAdapter
 } from "../../adapters/chainlink/interfaces/IChainlinkAdapter.sol";
 import {
-    IChainlinkAggregatorV3
-} from "../../adapters/chainlink/interfaces/external/IChainlinkAggregatorV3.sol";
-import {
     OracleAssetRegistry
 } from "../../adapters/chainlink/OracleAssetRegistry.sol";
 import {
@@ -46,7 +43,6 @@ import {
 import {
     IGmxV2MarketTypes
 } from "../../strategies/gmxFrf/interfaces/gmx/IGmxV2MarketTypes.sol";
-import { IMarketConfiguration } from "./interfaces/IMarketConfiguration.sol";
 import {
     IWrappedNativeToken
 } from "../../adapters/shared/interfaces/IWrappedNativeToken.sol";
