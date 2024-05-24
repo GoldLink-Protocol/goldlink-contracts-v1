@@ -265,14 +265,13 @@ interface IGmxFrfStrategyAccount is IStrategyAccount {
         );
 
     /// @dev Allows the account owner to sell assets for USDC in order to repay theirloan.
-     function executeSwapAssets(
+    function executeSwapAssets(
         address market,
         uint256 longTokenAmountOut,
         address callback,
         address receiver,
         bytes memory data
-    )
-        external;
+    ) external;
 
     /// @dev Call multiple methods in a single transaction without the need of a contract.
     function multicall(

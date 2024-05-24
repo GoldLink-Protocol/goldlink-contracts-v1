@@ -173,10 +173,7 @@ library LiquidationLogic {
         }
 
         // Call the liquidation callback handler.
-        return (
-            rebalanceAmount,
-            usdcAmountIn
-        );
+        return (rebalanceAmount, usdcAmountIn);
     }
 
     /**
