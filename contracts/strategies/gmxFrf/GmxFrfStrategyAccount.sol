@@ -30,6 +30,7 @@ import { Role } from "../../lib/gmx/role/Role.sol";
 import { GmxStrategyStorage } from "./impl/GmxStrategyStorage.sol";
 import { AccountGetters } from "./libraries/AccountGetters.sol";
 import { LiquidationLogic } from "./libraries/LiquidationLogic.sol";
+import { MulticallChecks } from "./libraries/MulticallChecks.sol";
 import { SwapCallbackLogic } from "./libraries/SwapCallbackLogic.sol";
 import { OrderLogic } from "./libraries/OrderLogic.sol";
 import { ClaimLogic } from "./libraries/ClaimLogic.sol";
@@ -72,10 +73,7 @@ contract GmxFrfStrategyAccount is
 
     /// @dev Require address is not zero.
     modifier onlyNonZeroAddress(address addressToCheck) {
-        require(
-            addressToCheck != address(0),
-            GmxFrfStrategyErrors.ZERO_ADDRESS_IS_NOT_ALLOWED
-        );
+        _onlyNonZeroAddress(addressToCheck);
         _;
     }
 
@@ -627,14 +625,7 @@ contract GmxFrfStrategyAccount is
                 data[i]
             );
 
-            if (!success) {
-                // Next 5 lines from https://ethereum.stackexchange.com/a/83577
-                if (result.length < 68) revert();
-                assembly {
-                    result := add(result, 0x04)
-                }
-                revert(abi.decode(result, (string)));
-            }
+            MulticallChecks.checkMulticallResult(success, result);
 
             results[i] = result;
         }

@@ -57,11 +57,14 @@ abstract contract GmxStrategyStorage {
     // ============ Constructor ============
 
     constructor(IGmxFrfStrategyManager manager) {
+        _onlyNonZeroAddress(address(manager));
+        MANAGER = manager;
+    }
+
+    function _onlyNonZeroAddress(address addressToCheck) internal pure {
         require(
-            address(manager) != address(0),
+            addressToCheck != address(0),
             GmxFrfStrategyErrors.ZERO_ADDRESS_IS_NOT_ALLOWED
         );
-
-        MANAGER = manager;
     }
 }
