@@ -332,12 +332,14 @@ contract GmxFrfStrategyAccount is
      * @param longTokenAmountOut The amount of `asset` to swap for USDC.
      * @param callback           The address of the callback contract that implements `ISwapCallbackHandler.handleSwapCallback`.
      * @param receiver           The address to send `asset` to before executing the callback function.
+     * @param data               Data passed through to the callback contract.
      */
     function executeSwapAssets(
         address market,
         uint256 longTokenAmountOut,
         address callback,
-        address receiver
+        address receiver,
+        bytes memory data
     )
         external
         onlyOwner
@@ -357,7 +359,8 @@ contract GmxFrfStrategyAccount is
             address(this),
             longTokenAmountOut,
             callback,
-            receiver
+            receiver,
+            data
         );
 
         emit SwapAssets(market, longTokenAmountOut, usdcAmountIn);
@@ -394,12 +397,14 @@ contract GmxFrfStrategyAccount is
      * @param amount    The amount of the asset to liquidate.
      * @param callback  The address of the callback contract to call after the liquidation is complete.
      * @param receiever The address to send `asset` to before initiating the callback.
+     * @param data      Data that is passed through to the callback contract.
      */
     function executeLiquidateAssets(
         address asset,
         uint256 amount,
         address callback,
-        address receiever
+        address receiever,
+        bytes memory data
     ) external strategyNonReentrant whenLiquidating hasActiveLoan {
         uint256 usdcAmountIn = SwapCallbackLogic.handleSwapCallback(
             MANAGER,
@@ -407,7 +412,8 @@ contract GmxFrfStrategyAccount is
             amount,
             MANAGER.getAssetLiquidationFeePercent(asset),
             callback,
-            receiever
+            receiever,
+            data
         );
 
         emit LiquidateAssets(msg.sender, asset, amount, usdcAmountIn);
@@ -504,7 +510,8 @@ contract GmxFrfStrategyAccount is
      */
     function executeSwapRebalance(
         address market,
-        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig
+        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig,
+        bytes memory data
     )
         external
         strategyNonReentrant
@@ -517,7 +524,8 @@ contract GmxFrfStrategyAccount is
                 MANAGER,
                 pendingLiquidations_,
                 market,
-                callbackConfig
+                callbackConfig,
+                data
             );
 
         emit SwapRebalancePosition(

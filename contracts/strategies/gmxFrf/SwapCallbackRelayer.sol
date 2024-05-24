@@ -21,15 +21,18 @@ contract SwapCallbackRelayer is ISwapCallbackRelayer {
      * @param callbackHandler   The address of the callback handler.
      * @param tokensToLiquidate The amount of tokens to liquidate during the callback.
      * @param expectedUsdc      The expected USDC received after the callback.
+     * @param data              Data passed through to the callback contract.
      */
     function relaySwapCallback(
         address callbackHandler,
         uint256 tokensToLiquidate,
-        uint256 expectedUsdc
+        uint256 expectedUsdc,
+        bytes memory data
     ) external {
         ISwapCallbackHandler(callbackHandler).handleSwapCallback(
             tokensToLiquidate,
-            expectedUsdc
+            expectedUsdc,
+            data
         );
     }
 }

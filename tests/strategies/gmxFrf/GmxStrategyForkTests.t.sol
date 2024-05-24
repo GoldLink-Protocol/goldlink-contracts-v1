@@ -561,7 +561,8 @@ contract GmxStrategyForkTests is
         vm.expectRevert();
         etched.executeSwapRebalance(
             GmxFrfStrategyMetadata.GMX_V2_ARB_USDC_MARKET,
-            callbackConfig
+            callbackConfig,
+            new bytes(0)
         );
     }
 
@@ -576,7 +577,8 @@ contract GmxStrategyForkTests is
         vm.expectRevert();
         etched.executeSwapRebalance(
             GmxFrfStrategyMetadata.GMX_V2_ETH_USDC,
-            callbackConfig
+            callbackConfig,
+            new bytes(0)
         );
     }
 
@@ -591,7 +593,8 @@ contract GmxStrategyForkTests is
         vm.expectRevert();
         etched.executeSwapRebalance(
             GmxFrfStrategyMetadata.GMX_V2_WBTC_USDC_MARKET,
-            callbackConfig
+            callbackConfig,
+            new bytes(0)
         );
     }
 
@@ -614,7 +617,8 @@ contract GmxStrategyForkTests is
         vm.expectRevert();
         etched.executeSwapRebalance(
             GmxFrfStrategyMetadata.GMX_V2_ARB_USDC_MARKET,
-            callbackConfig
+            callbackConfig,
+            new bytes(0)
         );
     }
 
@@ -628,7 +632,8 @@ contract GmxStrategyForkTests is
 
         etched.executeSwapRebalance(
             GmxFrfStrategyMetadata.GMX_V2_ARB_USDC_MARKET,
-            callbackConfig
+            callbackConfig,
+            new bytes(0)
         );
     }
 
