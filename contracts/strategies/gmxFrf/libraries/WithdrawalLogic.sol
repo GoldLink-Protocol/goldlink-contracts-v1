@@ -155,6 +155,7 @@ library WithdrawalLogic {
      * @param callback           The address of the callback handler. This address must be a smart contract that implements the
      * `ISwapCallbackHandler` interface.
      * @param receiver           The address that the `longToken` should be sent to.
+     * @param data               Data passed through to the callback contract.
      */
     function swapTokensForUSDC(
         IGmxFrfStrategyManager manager,
@@ -162,7 +163,8 @@ library WithdrawalLogic {
         address account,
         uint256 longTokenAmountOut,
         address callback,
-        address receiver
+        address receiver,
+        bytes memory data
     ) external returns (uint256 amountReceived) {
         // Return early if amount is zero.
         if (longTokenAmountOut == 0) {
@@ -189,7 +191,8 @@ library WithdrawalLogic {
                 longTokenAmountOut,
                 marketConfig.orderPricingParameters.maxSwapSlippagePercent,
                 callback,
-                receiver
+                receiver,
+                data
             );
     }
 

@@ -19,6 +19,7 @@ interface ISwapCallbackRelayer {
     function relaySwapCallback(
         address callbackHandler,
         uint256 tokensToLiquidate,
-        uint256 expectedUsdc
+        uint256 expectedUsdc,
+        bytes memory data
     ) external;
 }

@@ -215,7 +215,8 @@ interface IGmxFrfStrategyAccount is IStrategyAccount {
         address asset,
         uint256 amount,
         address callback,
-        address receiever
+        address receiever,
+        bytes memory data
     ) external;
 
     /// @dev Liquidate a position by creating an order to reduce the position's size.  Non-atomic.
@@ -247,7 +248,8 @@ interface IGmxFrfStrategyAccount is IStrategyAccount {
     /// @dev Rebalanec a position with
     function executeSwapRebalance(
         address market,
-        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig
+        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig,
+        bytes memory data
     ) external;
 
     /// @dev Rebalance a position that is outside of the configured delta range. Callable by anyone. The caller recieves a fee for their service.  Non-atomic.
@@ -261,6 +263,15 @@ interface IGmxFrfStrategyAccount is IStrategyAccount {
             IGmxV2OrderTypes.CreateOrderParams memory order,
             bytes32 orderKey
         );
+
+    /// @dev Allows the account owner to sell assets for USDC in order to repay theirloan.
+    function executeSwapAssets(
+        address market,
+        uint256 longTokenAmountOut,
+        address callback,
+        address receiver,
+        bytes memory data
+    ) external;
 
     /// @dev Call multiple methods in a single transaction without the need of a contract.
     function multicall(

@@ -34,6 +34,7 @@ library SwapCallbackLogic {
      * @param callback           The callback that will be called to handle the swap. This must implement the `ISwapCallbackHandler` interface and return the expected USDC amount
      * after execution finishes.
      * @param tokenReceiever    The address that should recieve the `asset` being swapped.
+     * @param data              Data passed through to the callback contract.
      * @return usdcAmountIn     The amount of USDC received back after the callback.
      */
     function handleSwapCallback(
@@ -42,7 +43,8 @@ library SwapCallbackLogic {
         uint256 amount,
         uint256 maxSlippagePercent,
         address callback,
-        address tokenReceiever
+        address tokenReceiever,
+        bytes memory data
     ) public returns (uint256 usdcAmountIn) {
         IERC20 usdc = manager.USDC();
 
@@ -85,7 +87,8 @@ library SwapCallbackLogic {
         manager.SWAP_CALLBACK_RELAYER().relaySwapCallback(
             callback,
             amount,
-            minimumUSDCRecieved
+            minimumUSDCRecieved,
+            data
         );
 
         usdcAmountIn = usdc.balanceOf(address(this)) - balanceUSDCBefore;

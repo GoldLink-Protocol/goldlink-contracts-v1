@@ -63,6 +63,7 @@ library LiquidationLogic {
      * @param pendingLiquidations_ The pending liquidations that will be canceled for the position.
      * @param market               The market to rebalance. This will be used to determine the token to sell.
      * @param callbackConfig       The callback configuration for the liquidation. At least `expectedUSDC` must be returned to the contract, otherwise the call will revert.
+     * @param data                 Data passed through to the callback contract.
      * @return rebalanceAmount     The amount of tokens sent out of the contract to be swapped for USDC.
      * @return usdcAmountIn        The callback configuration for the liquidation. At least `expectedUSDC` must be returned to the contract, otherwise the call will revert.
      */
@@ -71,7 +72,8 @@ library LiquidationLogic {
         mapping(bytes32 => OrderLogic.PendingLiquidation)
             storage pendingLiquidations_,
         address market,
-        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig
+        IGmxFrfStrategyAccount.CallbackConfig memory callbackConfig,
+        bytes memory data
     ) external returns (uint256 rebalanceAmount, uint256 usdcAmountIn) {
         IGmxV2DataStore dataStore = manager.gmxV2DataStore();
 
@@ -158,18 +160,20 @@ library LiquidationLogic {
             );
         }
 
-        // Call the liquidation callback handler.
-        return (
-            rebalanceAmount,
-            SwapCallbackLogic.handleSwapCallback(
+        {
+            usdcAmountIn = SwapCallbackLogic.handleSwapCallback(
                 manager,
                 longToken,
                 rebalanceAmount,
                 manager.getAssetLiquidationFeePercent(longToken),
                 callbackConfig.callback,
-                callbackConfig.receiever
-            )
-        );
+                callbackConfig.receiever,
+                data
+            );
+        }
+
+        // Call the liquidation callback handler.
+        return (rebalanceAmount, usdcAmountIn);
     }
 
     /**

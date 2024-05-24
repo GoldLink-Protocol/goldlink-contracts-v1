@@ -15,6 +15,7 @@ interface ISwapCallbackHandler {
     /// @dev Handle a swap callback.
     function handleSwapCallback(
         uint256 tokensToLiquidate,
-        uint256 expectedUsdc
+        uint256 expectedUsdc,
+        bytes memory data
     ) external;
 }
