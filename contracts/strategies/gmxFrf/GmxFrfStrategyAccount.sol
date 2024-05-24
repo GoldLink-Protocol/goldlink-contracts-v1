@@ -614,7 +614,6 @@ contract GmxFrfStrategyAccount is
                 data[i]
             );
 
-
             MulticallChecks.verifyResult(success, result);
 
             results[i] = result;
