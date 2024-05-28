@@ -115,10 +115,8 @@ contract DeployStrategy is Script {
                 .SharedOrderParameters(
                     vm.envUint(CALLBACK_GAS_LIMIT_ENV_KEY),
                     vm.envUint(EXECUTION_FEE_BUFFER_PERCENT_ENV_KEY),
-                    // vm.envBytes32(REFERRAL_CODE_ENV_KEY),
-                    bytes32(0),
-                    // vm.envAddress(UI_FEE_RECEIVER_ENV_KEY),
-                    address(0),
+                    vm.envBytes32(REFERRAL_CODE_ENV_KEY),
+                    vm.envAddress(UI_FEE_RECEIVER_ENV_KEY),
                     vm.envUint(WITHDRAWAL_BUFFER_PERCENTAGE_ENV_KEY)
                 );
 
@@ -142,7 +140,7 @@ contract DeployStrategy is Script {
         address managerProxy = address(
             new TransparentUpgradeableProxy(
                 managerLogic,
-                address(this), // initialOwner for the proxy admin
+                vm.envAddress(PROXY_ADMIN_ADDRESS_ENV_KEY), // initialOwner for the proxy admin
                 initializerData
             )
         );
@@ -174,5 +172,6 @@ contract DeployStrategy is Script {
         console.log("Manager Logic:", address(managerLogic));
         console.log("TransparentUpgradeableProxy", address(managerProxy));
         console.log("AccountDeployer", address(deployer));
+        console.log("Beacon", accountBeacon);
     }
 }
