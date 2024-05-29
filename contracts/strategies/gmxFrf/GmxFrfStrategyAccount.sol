@@ -749,13 +749,6 @@ contract GmxFrfStrategyAccount is
         );
     }
 
-    function _onlyNonZeroAddress(address addressToCheck) internal pure {
-        require(
-            addressToCheck != address(0),
-            GmxFrfStrategyErrors.ZERO_ADDRESS_IS_NOT_ALLOWED
-        );
-    }
-
     /**
      * @notice After process liquidation hook to set the most recent liquidation timestamp.
      */

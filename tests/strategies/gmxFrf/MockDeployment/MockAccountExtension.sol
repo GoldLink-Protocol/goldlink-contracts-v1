@@ -20,18 +20,15 @@ contract MockAccountExtension is
         bytes memory data
     )
         external
+        payable
         onlyOwner
         returns (bool, bytes memory)
     {
+        if (msg.value == 0) {
+            return target.call{value: msg.value}(data);
+        }
         return target.call(
             data
         );
-    }
-
-    function execPayable(
-        address payable target,
-        bytes memory data
-    ) external payable onlyOwner returns (bool, bytes memory) {
-        return target.call{value: msg.value}(data);
     }
 }
