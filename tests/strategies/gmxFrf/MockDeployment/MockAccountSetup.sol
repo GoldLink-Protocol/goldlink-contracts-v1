@@ -53,6 +53,9 @@ import {
 import {
     IChainlinkAdapter
 } from "../../../../contracts/adapters/chainlink/interfaces/IChainlinkAdapter.sol";
+import {
+    IChainlinkAggregatorV3
+} from "../../../../contracts/adapters/chainlink/interfaces/external/IChainlinkAggregatorV3.sol";
 
 import {MockRealtimeFeedVerifier} from "./MockRealtimeFeedVerifier.sol";
 
@@ -66,6 +69,8 @@ abstract contract MockAccountSetup is Test {
     // Steps
     // 1) Deploy Core / Strategy
     // 2) Etch Mock Oracle Feed Verifier To Deployed Address of Real Oracle Verifier
+
+    MockArbSys ARBSYS;
 
     IERC20 constant USDC = IERC20(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
 
@@ -84,8 +89,12 @@ abstract contract MockAccountSetup is Test {
         _etchMockRealtimeFeedVerifier();
         _deployGmxFrfStrategy();
         _deployCore();
+        _approveMarkets();
         _createAccount();
         _stealFunds();
+        _lendFunds(1e10);
+        _addCollateral(1e9);
+        _borrow(2e9);
     }
 
     function _etchArbSys() private {
@@ -95,6 +104,7 @@ abstract contract MockAccountSetup is Test {
             address(0x0000000000000000000000000000000000000064),
             address(arbSys).code
         );
+        ARBSYS = MockArbSys(address(0x0000000000000000000000000000000000000064));
     }
 
     function _etchMockRealtimeFeedVerifier() private {
@@ -210,6 +220,48 @@ abstract contract MockAccountSetup is Test {
         RESERVE = CONTROLLER.STRATEGY_RESERVE();
     }
 
+    function _approveMarkets() private {
+
+        IChainlinkAdapter.OracleConfiguration
+            memory oracleConfiguration = IChainlinkAdapter.OracleConfiguration(
+                7200,
+                GmxFrfStrategyMetadata.ETH_USD_ORACLE
+        );
+        IMarketConfiguration.OrderPricingParameters
+            memory orderPricingParameters = IMarketConfiguration
+                .OrderPricingParameters(
+                    30000000000000000,
+                    30000000000000000,
+                    5000000000000000000000000000000,
+                    50000000000000000000000000000000000,
+                    true
+                );
+
+        IMarketConfiguration.PositionParameters
+            memory positionParameters = IMarketConfiguration.PositionParameters(
+                10000000000000000000000000000000,
+                200000000000000000000000000000000000
+            );
+
+        IMarketConfiguration.UnwindParameters
+            memory unwindParameters = IMarketConfiguration.UnwindParameters(
+                1050000000000000000,
+                100000000000000,
+                1200000000000000000,
+                20000000000000000
+            );
+
+
+        MANAGER.setMarket(
+            GmxFrfStrategyMetadata.GMX_V2_ETH_USDC,
+            oracleConfiguration,
+            orderPricingParameters,
+            positionParameters,
+            unwindParameters,
+            30000000000000000
+        );
+    }
+
 
     function _stealFunds() internal {
         vm.deal(address(this), 20 ether);
@@ -229,5 +281,14 @@ abstract contract MockAccountSetup is Test {
     function _lendFunds(uint256 amount) internal {
         USDC.approve(address(RESERVE), amount);
         RESERVE.deposit(amount, address(this));
+    }
+
+    function _addCollateral(uint256 amount) internal {
+        USDC.approve(address(BANK), amount);
+        ACCOUNT.executeAddCollateral(amount);
+    }
+
+    function _borrow(uint256 amount) internal {
+        ACCOUNT.executeBorrow(amount);
     }
 }
