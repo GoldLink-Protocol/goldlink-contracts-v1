@@ -65,10 +65,16 @@ import {
     StrategyController
 } from "../../../../contracts/core/StrategyController.sol";
 
+import { SwapHandler } from "./liquidator/Swaphandler.sol";
+
+import { IUniswapV3PoolActions } from "./liquidator/external/IUniswapV3PoolActions.sol";
+
 abstract contract MockAccountSetup is Test {
     // Steps
     // 1) Deploy Core / Strategy
     // 2) Etch Mock Oracle Feed Verifier To Deployed Address of Real Oracle Verifier
+
+    SwapHandler SWAPHANDLER;
 
     MockArbSys ARBSYS;
 
@@ -76,6 +82,8 @@ abstract contract MockAccountSetup is Test {
 
     IWrappedNativeToken constant WETH =
         IWrappedNativeToken(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
+
+    IUniswapV3PoolActions WETH_USDC_UNIV3 = IUniswapV3PoolActions(0xC6962004f452bE9203591991D15f6b388e09E8D0);
 
     GmxFrfStrategyManager MANAGER;
     GmxFrfStrategyDeployer DEPLOYER;
@@ -85,6 +93,7 @@ abstract contract MockAccountSetup is Test {
     MockAccountExtension ACCOUNT;
 
     constructor() {
+        SWAPHANDLER = new SwapHandler(USDC);
         _etchArbSys();
         _etchMockRealtimeFeedVerifier();
         _deployGmxFrfStrategy();
@@ -110,7 +119,7 @@ abstract contract MockAccountSetup is Test {
     function _etchMockRealtimeFeedVerifier() private {
         MockRealtimeFeedVerifier verifier = new MockRealtimeFeedVerifier();
         vm.etch(
-            address(0xa11B501c2dd83Acd29F6727570f2502FAaa617F2),
+            address(0xDBaeB34DF0AcfA564a49e13840C5CE2894C4b886),
             address(verifier).code
         );
     }

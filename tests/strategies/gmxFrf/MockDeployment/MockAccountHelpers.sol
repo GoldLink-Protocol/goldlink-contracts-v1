@@ -3,65 +3,25 @@
 pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
-
-import { MockAccountSetup } from "./MockAccountSetup.sol";
-import { GmxFrfStrategyMetadata } from "../GmxFrfStrategyMetadata.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IGmxV2OrderTypes} from "../../../../contracts/lib/gmx/interfaces/external/IGmxV2OrderTypes.sol";
-import {IGmxV2MarketTypes} from "../../../../contracts/strategies/gmxFrf/interfaces/gmx/IGmxV2MarketTypes.sol";
-import { IOrderHandler } from "./IOrderHandler.sol";
+import { MockAccountGmxHelpers } from "./MockAccountGmxHelpers.sol";
 
+abstract contract MockAccountHelpers is MockAccountGmxHelpers {
 
-abstract contract MockAccountHelpers is MockAccountSetup {
-
-    address ORACLE_SIGNER = 0xC539cB358a58aC67185BaAD4d5E3f7fCfc903700;
-
-    function _executeGmxOrder(bytes32 orderKey) internal {
-        IGmxV2OrderTypes.Props memory order = _getOrderInfo(orderKey);
-        require(order.addresses.market != address(0), "no order exists");
-        IOrderHandler.SetPricesParams memory params;
-
-
-        IGmxV2MarketTypes.Props memory market = _getMarket(order.addresses.market);
-
-        params.realtimeFeedTokens = new address[](2);
-        params.realtimeFeedTokens[0] = market.shortToken;
-        params.realtimeFeedTokens[1] = market.longToken;
-        params.realtimeFeedData = new bytes[](2);
-        (uint256 priceShort,) = MANAGER.getAssetPrice(market.shortToken);
-        (uint256 priceLong,) = MANAGER.getAssetPrice(market.longToken);
-
-        params.realtimeFeedData[0] = abi.encode(_createRealTimeFeedReport(market.shortToken, priceShort));
-        params.realtimeFeedData[1] = abi.encode(_createRealTimeFeedReport(market.longToken, priceLong));
-        vm.prank(ORACLE_SIGNER);
-        IOrderHandler(0x352f684ab9e97a6321a13CF03A61316B681D9fD2).executeOrder(orderKey, params);
+    function _fundAccount(address asset, uint256 amount) internal {
+        IERC20(asset).transfer(address(ACCOUNT), amount);
     }
 
-
-    function _getOrderInfo(bytes32 orderKey) internal returns (IGmxV2OrderTypes.Props memory) {
-       return GmxFrfStrategyMetadata.GMX_V2_READER.getOrder(GmxFrfStrategyMetadata.GMX_V2_DATASTORE, orderKey);
+    function _sendFromAccount(address asset, address to, uint256 amount) internal {
+        ACCOUNT.exec(asset, abi.encodeWithSignature("transfer(address,uint256)", to, amount));
     }
 
-    function _getMarket(address market) internal returns (IGmxV2MarketTypes.Props memory) {
-        return GmxFrfStrategyMetadata.GMX_V2_READER.getMarket(GmxFrfStrategyMetadata.GMX_V2_DATASTORE, market);
+    function _sendIncreaseOrder(IGmxV2OrderTypes.CreateOrderParams memory order) internal returns (bytes32) {
+        WETH.deposit{ value: 1e15 }();
+        WETH.transfer(address(MANAGER.gmxV2OrderVault()), 1e15);
+        _sendFromAccount(address(USDC), address(MANAGER.gmxV2OrderVault()), order.numbers.initialCollateralDeltaAmount);
+        return _sendOrder(order);
     }
 
-    function _createRealTimeFeedReport(address asset, uint256 assetPrice) internal returns (IOrderHandler.RealtimeFeedReport memory report) {
-        report.feedId = GmxFrfStrategyMetadata.GMX_V2_DATASTORE.getBytes32(realtimeFeedIdKey(asset));
-        report.observationsTimestamp = uint32(block.timestamp - 20);
-        report.median = int192(uint192(assetPrice));
-        report.bid = int192(uint192(assetPrice));
-        report.ask = int192(uint192(assetPrice));
-        report.blocknumberUpperBound = uint64(block.number - 1);
-        report.upperBlockhash = ARBSYS.arbBlockHash(report.blocknumberUpperBound);
-        report.blocknumberLowerBound = uint64(block.number - 20);
-        report.currentBlockTimestamp = uint64(block.timestamp);
-    }
-
-
-    function realtimeFeedIdKey(address token) internal pure returns (bytes32) {
-        return keccak256(abi.encode(
-            keccak256(abi.encode("REALTIME_FEED_ID")),
-            token
-        ));
-    }
 }
