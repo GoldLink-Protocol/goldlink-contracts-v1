@@ -19,9 +19,7 @@ import {
     UpgradeableBeacon
 } from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
-import {
-    GmxFrfStrategyMetadata
-} from "../GmxFrfStrategyMetadata.sol";
+import { GmxFrfStrategyMetadata } from "../GmxFrfStrategyMetadata.sol";
 
 import {
     GmxFrfStrategyManager
@@ -38,7 +36,8 @@ import {
 } from "../../../../contracts/interfaces/IStrategyBank.sol";
 import {
     IInterestRateModel
-} from "../../../../contracts/interfaces/IInterestRateModel.sol";import {
+} from "../../../../contracts/interfaces/IInterestRateModel.sol";
+import {
     IStrategyReserve
 } from "../../../../contracts/interfaces/IStrategyReserve.sol";
 
@@ -57,9 +56,9 @@ import {
     IChainlinkAggregatorV3
 } from "../../../../contracts/adapters/chainlink/interfaces/external/IChainlinkAggregatorV3.sol";
 
-import {MockRealtimeFeedVerifier} from "./MockRealtimeFeedVerifier.sol";
+import { MockRealtimeFeedVerifier } from "./MockRealtimeFeedVerifier.sol";
 
-import {MockAccountExtension} from "./MockAccountExtension.sol";
+import { MockAccountExtension } from "./MockAccountExtension.sol";
 
 import {
     StrategyController
@@ -67,7 +66,9 @@ import {
 
 import { SwapHandler } from "./liquidator/Swaphandler.sol";
 
-import { IUniswapV3PoolActions } from "./liquidator/external/IUniswapV3PoolActions.sol";
+import {
+    IUniswapV3PoolActions
+} from "./liquidator/external/IUniswapV3PoolActions.sol";
 
 abstract contract MockAccountSetup is Test {
     // Steps
@@ -83,7 +84,8 @@ abstract contract MockAccountSetup is Test {
     IWrappedNativeToken constant WETH =
         IWrappedNativeToken(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
 
-    IUniswapV3PoolActions WETH_USDC_UNIV3 = IUniswapV3PoolActions(0xC6962004f452bE9203591991D15f6b388e09E8D0);
+    IUniswapV3PoolActions WETH_USDC_UNIV3 =
+        IUniswapV3PoolActions(0xC6962004f452bE9203591991D15f6b388e09E8D0);
 
     GmxFrfStrategyManager MANAGER;
     GmxFrfStrategyDeployer DEPLOYER;
@@ -113,7 +115,9 @@ abstract contract MockAccountSetup is Test {
             address(0x0000000000000000000000000000000000000064),
             address(arbSys).code
         );
-        ARBSYS = MockArbSys(address(0x0000000000000000000000000000000000000064));
+        ARBSYS = MockArbSys(
+            address(0x0000000000000000000000000000000000000064)
+        );
     }
 
     function _etchMockRealtimeFeedVerifier() private {
@@ -125,14 +129,13 @@ abstract contract MockAccountSetup is Test {
     }
 
     function _deployGmxFrfStrategy() private {
-         address managerLogic = address(
+        address managerLogic = address(
             new GmxFrfStrategyManager(
                 GmxFrfStrategyMetadata.USDC,
                 GmxFrfStrategyMetadata.WETH,
-               address(this)
+                address(this)
             )
-         );
-
+        );
 
         IDeploymentConfiguration.Deployments
             memory deployments = GmxFrfStrategyMetadata.getDeployments();
@@ -142,7 +145,9 @@ abstract contract MockAccountSetup is Test {
                 .SharedOrderParameters(
                     1000000,
                     100000000000000000,
-                    bytes32(0x676F6C646C696E6B000000000000000000000000000000000000000000000000),
+                    bytes32(
+                        0x676F6C646C696E6B000000000000000000000000000000000000000000000000
+                    ),
                     0x62dF56DcEaaFEcBbb57D595E8Cf0b90cA437e77d,
                     1100000000000000000
                 );
@@ -169,56 +174,49 @@ abstract contract MockAccountSetup is Test {
             )
         );
 
-
         MANAGER = GmxFrfStrategyManager(managerProxy);
 
         IGmxFrfStrategyManager manager = IGmxFrfStrategyManager(managerProxy);
 
         address accountLogic = address(new MockAccountExtension(manager));
 
-
         address accountBeacon = address(
-            new UpgradeableBeacon(
-                accountLogic,
-                address(this)
-            )
+            new UpgradeableBeacon(accountLogic, address(this))
         );
 
-        DEPLOYER = new GmxFrfStrategyDeployer(
-            accountBeacon
-        );
-
+        DEPLOYER = new GmxFrfStrategyDeployer(accountBeacon);
     }
 
-
-
     function _deployCore() private {
-        IStrategyBank.BankParameters memory bankParams = IStrategyBank.BankParameters(
-            250000000000000000,
-            166666666666666666,
-            10000000000000000,
-            50000000000000000,
-            75000000000000000,
-            10000000,
-            DEPLOYER
-        );
+        IStrategyBank.BankParameters memory bankParams = IStrategyBank
+            .BankParameters(
+                250000000000000000,
+                166666666666666666,
+                10000000000000000,
+                50000000000000000,
+                75000000000000000,
+                10000000,
+                DEPLOYER
+            );
 
-        IInterestRateModel.InterestRateModelParameters memory interestRateModel = IInterestRateModel.InterestRateModelParameters(
-            900000000000000000,
-            80000000000000000,
-            1055600000000000,
-            150000000000000000
-        );
+        IInterestRateModel.InterestRateModelParameters
+            memory interestRateModel = IInterestRateModel
+                .InterestRateModelParameters(
+                    900000000000000000,
+                    80000000000000000,
+                    1055600000000000,
+                    150000000000000000
+                );
 
+        IStrategyReserve.ReserveParameters
+            memory reserveParams = IStrategyReserve.ReserveParameters(
+                1000000000000,
+                interestRateModel,
+                "GoldLink GMX Funding Rate Farming Reserve Shares",
+                "GFRF"
+            );
 
-        IStrategyReserve.ReserveParameters memory reserveParams = IStrategyReserve.ReserveParameters(
-            1000000000000,
-            interestRateModel,
-            "GoldLink GMX Funding Rate Farming Reserve Shares",
-            "GFRF"
-        );
-
-         CONTROLLER = new StrategyController(
+        CONTROLLER = new StrategyController(
             address(this),
             GmxFrfStrategyMetadata.USDC,
             reserveParams,
@@ -230,12 +228,11 @@ abstract contract MockAccountSetup is Test {
     }
 
     function _approveMarkets() private {
-
         IChainlinkAdapter.OracleConfiguration
             memory oracleConfiguration = IChainlinkAdapter.OracleConfiguration(
                 7200,
                 GmxFrfStrategyMetadata.ETH_USD_ORACLE
-        );
+            );
         IMarketConfiguration.OrderPricingParameters
             memory orderPricingParameters = IMarketConfiguration
                 .OrderPricingParameters(
@@ -260,7 +257,6 @@ abstract contract MockAccountSetup is Test {
                 20000000000000000
             );
 
-
         MANAGER.setMarket(
             GmxFrfStrategyMetadata.GMX_V2_ETH_USDC,
             oracleConfiguration,
@@ -270,7 +266,6 @@ abstract contract MockAccountSetup is Test {
             30000000000000000
         );
     }
-
 
     function _stealFunds() internal {
         vm.deal(address(this), 20 ether);
@@ -284,7 +279,9 @@ abstract contract MockAccountSetup is Test {
     }
 
     function _createAccount() internal {
-        ACCOUNT = MockAccountExtension(payable(BANK.executeOpenAccount(address(this))));
+        ACCOUNT = MockAccountExtension(
+            payable(BANK.executeOpenAccount(address(this)))
+        );
     }
 
     function _lendFunds(uint256 amount) internal {

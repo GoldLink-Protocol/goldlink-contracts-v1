@@ -22,7 +22,6 @@ interface IOrderHandler {
         bytes[] realtimeFeedData;
     }
 
-
     // bid: min price, highest buy price
     // ask: max price, lowest sell price
     struct RealtimeFeedReport {
@@ -48,7 +47,7 @@ interface IOrderHandler {
         uint64 currentBlockTimestamp;
     }
 
-     function executeOrder(
+    function executeOrder(
         bytes32 key,
         SetPricesParams calldata oracleParams
     ) external;

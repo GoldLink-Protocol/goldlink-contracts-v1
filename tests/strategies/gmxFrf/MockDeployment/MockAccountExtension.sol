@@ -10,25 +10,18 @@ import {
     IGmxFrfStrategyManager
 } from "../../../../contracts/strategies/gmxFrf/interfaces/IGmxFrfStrategyManager.sol";
 
-contract MockAccountExtension is
-    GmxFrfStrategyAccount
-{
-    constructor(IGmxFrfStrategyManager manager) GmxFrfStrategyAccount(manager) {}
+contract MockAccountExtension is GmxFrfStrategyAccount {
+    constructor(
+        IGmxFrfStrategyManager manager
+    ) GmxFrfStrategyAccount(manager) {}
 
     function exec(
         address target,
         bytes memory data
-    )
-        external
-        payable
-        onlyOwner
-        returns (bool, bytes memory)
-    {
+    ) external payable onlyOwner returns (bool, bytes memory) {
         if (msg.value == 0) {
-            return target.call{value: msg.value}(data);
+            return target.call{ value: msg.value }(data);
         }
-        return target.call(
-            data
-        );
+        return target.call(data);
     }
 }
