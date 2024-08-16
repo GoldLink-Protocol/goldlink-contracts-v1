@@ -170,6 +170,32 @@ library Position {
         props.numbers.decreasedAtBlock = value;
     }
 
+    function decreasedAtTime(
+        IGmxV2PositionTypes.Props memory props
+    ) internal pure returns (uint256) {
+        return props.numbers.decreasedAtTime;
+    }
+
+    function setDecreasedAtTime(
+        IGmxV2PositionTypes.Props memory props,
+        uint256 value
+    ) internal pure {
+        props.numbers.decreasedAtTime = value;
+    }
+
+    function increasedAtTime(
+        IGmxV2PositionTypes.Props memory props
+    ) internal pure returns (uint256) {
+        return props.numbers.increasedAtTime;
+    }
+
+    function setIncreasedAtTime(
+        IGmxV2PositionTypes.Props memory props,
+        uint256 value
+    ) internal pure {
+        props.numbers.increasedAtTime = value;
+    }
+
     function isLong(
         IGmxV2PositionTypes.Props memory props
     ) internal pure returns (bool) {

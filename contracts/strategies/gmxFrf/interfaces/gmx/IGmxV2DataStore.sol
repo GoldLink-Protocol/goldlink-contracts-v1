@@ -34,4 +34,6 @@ interface IGmxV2DataStore {
     function getAddressArray(
         bytes32 key
     ) external view returns (address[] memory);
+
+    function getBytes32(bytes32 key) external view returns (bytes32);
 }

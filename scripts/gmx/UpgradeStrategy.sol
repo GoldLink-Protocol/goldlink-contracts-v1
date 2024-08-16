@@ -16,8 +16,6 @@ import {
 
 contract UpgradeStrategy is Script {
     string constant DEPLOYER_PRIVATE_KEY_ENV_KEY = "DEPLOYER_PRIVATE_KEY";
-    string constant MANAGER_ADDRESS_ENV_KEY = "MANAGER_ADDRESS";
-    string constant BEACON_ADDRESS_ENV_KEY = "BEACON_ADDRESS";
 
     function run() public {
         uint256 privateKey = vm.envUint(DEPLOYER_PRIVATE_KEY_ENV_KEY);
@@ -25,12 +23,12 @@ contract UpgradeStrategy is Script {
         vm.startBroadcast(privateKey);
 
         IGmxFrfStrategyManager manager = IGmxFrfStrategyManager(
-            vm.envAddress(MANAGER_ADDRESS_ENV_KEY)
+            0x975B4a621D937605Eaeb117C00653CfBFbFb46CC
         );
 
         address updatedLogic = address(new GmxFrfStrategyAccount(manager));
         UpgradeableBeacon beacon = UpgradeableBeacon(
-            vm.envAddress(BEACON_ADDRESS_ENV_KEY)
+            0x98E27951E80ba7ab480c8e352e1d605AcF01B1Af
         );
         beacon.upgradeTo(updatedLogic);
         vm.stopBroadcast();

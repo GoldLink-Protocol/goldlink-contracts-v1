@@ -8,12 +8,6 @@ import { SignedMath } from "@openzeppelin/contracts/utils/math/SignedMath.sol";
 
 import { PercentMath } from "../../../libraries/PercentMath.sol";
 import {
-    IGmxV2DataStore
-} from "../../../strategies/gmxFrf/interfaces/gmx/IGmxV2DataStore.sol";
-import {
-    IGmxV2Reader
-} from "../../../lib/gmx/interfaces/external/IGmxV2Reader.sol";
-import {
     IGmxV2PriceTypes
 } from "../../../strategies/gmxFrf/interfaces/gmx/IGmxV2PriceTypes.sol";
 import {
@@ -29,9 +23,6 @@ import {
     IGmxV2ReferralStorage
 } from "../../../strategies/gmxFrf/interfaces/gmx/IGmxV2ReferralStorage.sol";
 import {
-    PositionStoreUtils
-} from "../../../lib/gmx/position/PositionStoreUtils.sol";
-import {
     IGmxFrfStrategyManager
 } from "../interfaces/IGmxFrfStrategyManager.sol";
 import {
@@ -40,8 +31,8 @@ import {
 import {
     GmxMarketGetters
 } from "../../../strategies/gmxFrf/libraries/GmxMarketGetters.sol";
-import { IMarketConfiguration } from "../interfaces/IMarketConfiguration.sol";
 import { Pricing } from "./Pricing.sol";
+import { Constants } from "../../../libraries/Constants.sol";
 
 /**
  * @title DeltaConvergenceMath
@@ -64,6 +55,7 @@ library DeltaConvergenceMath {
     }
 
     struct DecreasePositionResult {
+        uint256 sizeDeltaActualUsd;
         uint256 positionSizeNextUsd;
         uint256 estimatedOutputUsd;
         uint256 collateralToRemove;
@@ -105,48 +97,6 @@ library DeltaConvergenceMath {
         address account,
         address market
     ) internal view returns (uint256 valueUSD) {
-        // Passing true for `useMaxSizeDelta` because the cost of exiting the entire positon must be considered
-        // (due to price impact and fees) in order properly account the estimated value.
-        IGmxV2PositionTypes.PositionInfo memory positionInfo = _getPositionInfo(
-            manager,
-            account,
-            market,
-            0,
-            true
-        );
-
-        (address shortToken, address longToken) = GmxMarketGetters
-            .getMarketTokens(manager.gmxV2DataStore(), market);
-
-        uint256 shortTokenPrice = Pricing.getUnitTokenPriceUSD(
-            manager,
-            shortToken
-        );
-
-        uint256 longTokenPrice = Pricing.getUnitTokenPriceUSD(
-            manager,
-            longToken
-        );
-
-        return
-            getPositionValueUSD(positionInfo, shortTokenPrice, longTokenPrice);
-    }
-
-    /**
-     * @notice Get the value of a position in terms of USD. The `valueUSD` reflects the value that could be extracted from the position if it were liquidated right away,
-     * and thus accounts for the price impact of closing the position.
-     * @param positionInfo    The position information, which is queried from GMX via the `Reader.getPositionInfo` function.
-     * @param shortTokenPrice The price of the short token.
-     * @param longTokenPrice  The price of the long token.
-     * @return valueUSD       The expected value of the position after closing the position given at the current market prices and GMX pool state. This value can only be considered an estimate,
-     * as asset prices can change in between the time the value is calculated and when the GMX keeper actually executes the order. Furthermore, price impact can change during this period,
-     * as other state changing actions can effect the GMX pool, resulting in a different price impact values.
-     */
-    function getPositionValueUSD(
-        IGmxV2PositionTypes.PositionInfo memory positionInfo,
-        uint256 shortTokenPrice,
-        uint256 longTokenPrice
-    ) internal pure returns (uint256 valueUSD) {
         // The value of a position is made up of the following fields:
         // 1. The value of the collateral.
         // 2. The value of unsettled positive funding fees, which consist of both shortTokens and longTokens.
@@ -161,46 +111,85 @@ library DeltaConvergenceMath {
         //    Furthermore, they are not "locked" in the position and can be though of as an auxiliary token balance.
         // 2. The value of the ERC20 tokens in the account. These do not relate to the position that is held on GMX and therefore are factored into the value of the account separately.
 
-        // This accounts for the value of the unsettled short token funding fees.
+        // Passing true for `useMaxSizeDelta` because the cost of exiting the entire positon must be considered
+        // (due to price impact and fees) in order properly account the estimated value.
+        IGmxV2PositionTypes.PositionInfo memory positionInfo = getPositionInfo(
+            manager,
+            account,
+            market,
+            0,
+            true
+        );
+
+        // Get information on the position's market to discern prices.
+        IGmxV2MarketTypes.Props memory marketInfo = GmxMarketGetters.getMarket(
+            manager.gmxV2DataStore(),
+            market
+        );
+
+        // Get the prices for the market tokens.
+        IGmxV2MarketTypes.MarketPrices memory prices;
+        {
+            uint256 shortTokenPrice = Pricing.getUnitTokenPriceUSD(
+                manager,
+                marketInfo.shortToken
+            );
+
+            uint256 longTokenPrice = Pricing.getUnitTokenPriceUSD(
+                manager,
+                marketInfo.longToken
+            );
+
+            prices = _makeMarketPrices(shortTokenPrice, longTokenPrice);
+        }
+
+        // Get the decrease output. This is the expected decrease amount out.
+        uint256 decreaseOutputUSD;
+        {
+            // Add the claimable long token amount to the value of the position.
+            valueUSD += Pricing.getTokenValueUSD(
+                positionInfo.fees.funding.claimableLongTokenAmount,
+                prices.longTokenPrice.max
+            );
+
+            uint256 collateralOutputTokens;
+            {
+                // Get the collateral cost and output in long token. One of these values will be zero.
+                (
+                    uint256 collateralCostTokens,
+                    uint256 outputTokens
+                ) = getDecreaseOrderCostsAndOutput(
+                        prices.longTokenPrice.max,
+                        positionInfo
+                    );
+
+                // The amount of collateral tokens being swapped that contribute to the `outputAmount` of the position decrease. The `collateralAmount` of the position after the decrease should
+                // equal the position's `sizeInTokens`.
+                collateralOutputTokens =
+                    positionInfo.position.numbers.collateralAmount +
+                    outputTokens -
+                    collateralCostTokens;
+            }
+
+            // Get the expected output in USD of the position decrease, which includes both positive PnL and collateral.
+            (decreaseOutputUSD, , ) = manager.gmxV2Reader().getSwapAmountOut(
+                manager.gmxV2DataStore(),
+                marketInfo,
+                prices,
+                marketInfo.longToken,
+                collateralOutputTokens,
+                manager.getUiFeeReceiver()
+            );
+        }
+
+        // Add the claimable short balance + the decrease output to the value of the position.
         valueUSD += Pricing.getTokenValueUSD(
-            positionInfo.fees.funding.claimableShortTokenAmount,
-            shortTokenPrice
+            positionInfo.fees.funding.claimableShortTokenAmount +
+                decreaseOutputUSD,
+            prices.shortTokenPrice.max
         );
 
-        // The amount of collateral tokens initially held in the position, before accounting for fees, is just the collateral token amount plus the unclaimed funding fees.
-        // These are all measured in terms of the longToken of the GMX market, which is also always the token that Goldlink uses to collateralize the position.
-        uint256 collateralTokenHeldInPosition = positionInfo
-            .position
-            .numbers
-            .collateralAmount +
-            positionInfo.fees.funding.claimableLongTokenAmount;
-
-        // The cost is measured in terms of the collateral token, which includes the GMX borrowing fees and negative funding fees.
-        // Therefore, subtract the cost from the collateral tokens to recieve the net amount of collateral tokens held in the position.
-        collateralTokenHeldInPosition -= Math.min(
-            collateralTokenHeldInPosition,
-            positionInfo.fees.totalCostAmount
-        );
-
-        // This accounts for the value of the collateral, the unsettled long token funding fees, the negative funding fee amount, the borrowing fees, the UI fee,
-        // and the positive impact of the referral bonus.
-        valueUSD += Pricing.getTokenValueUSD(
-            collateralTokenHeldInPosition,
-            longTokenPrice
-        );
-
-        // The absolute value of the pnl in terms of USD. This also includes the price impact of closing the position,
-        // which can either increase or decrease the value of the position. It is important to include the price impact because for large positions,
-        // liquidation may result in high slippage, which can result in the loss of lender funds. In order to trigger liquidations for these positions early, including the price impact
-        // in the calculation of the position value is necessary.
-        uint256 absPnlAfterPriceImpactUSD = SignedMath.abs(
-            positionInfo.pnlAfterPriceImpactUsd
-        );
-
-        return
-            (positionInfo.pnlAfterPriceImpactUsd < 0)
-                ? valueUSD - Math.min(absPnlAfterPriceImpactUSD, valueUSD)
-                : valueUSD + absPnlAfterPriceImpactUSD;
+        return valueUSD;
     }
 
     /**
@@ -241,11 +230,10 @@ library DeltaConvergenceMath {
                 longToken,
                 account
             );
-
         breakdown.tokensLong += breakdown.claimableLongTokens;
 
         // Get the position information.
-        breakdown.positionInfo = _getPositionInfo(
+        breakdown.positionInfo = getPositionInfo(
             manager,
             account,
             market,
@@ -266,23 +254,20 @@ library DeltaConvergenceMath {
             .positionInfo
             .fees
             .funding
-            .fundingFeeAmount;
+            .claimableLongTokenAmount;
         breakdown.tokensLong += breakdown.unsettledLongTokens;
 
         // Position size.
-        breakdown.tokensShort += breakdown
+        breakdown.tokensShort = breakdown
             .positionInfo
             .position
             .numbers
             .sizeInTokens;
 
-        breakdown.fundingAndBorrowFeesLongTokens =
-            breakdown.positionInfo.fees.funding.fundingFeeAmount +
-            breakdown.positionInfo.fees.borrowing.borrowingFeeAmount;
-
-        // This should not normally happen, but it can in the event that someone checks for the delta
-        // of a position before a GMX keeper liquidates the underwater position.
-
+        breakdown.fundingAndBorrowFeesLongTokens = breakdown
+            .positionInfo
+            .fees
+            .totalCostAmount;
         breakdown.tokensLong -= Math.min(
             breakdown.fundingAndBorrowFeesLongTokens,
             breakdown.tokensLong
@@ -323,6 +308,7 @@ library DeltaConvergenceMath {
 
         // Get position information if one already exists.
         IGmxV2PositionTypes.PositionInfo memory info;
+
         if (
             PositionStoreUtils.getPositionSizeUsd(
                 manager.gmxV2DataStore(),
@@ -345,8 +331,7 @@ library DeltaConvergenceMath {
             .numbers
             .collateralAmount +
             result.swapOutputTokens -
-            info.fees.funding.fundingFeeAmount -
-            info.fees.borrowing.borrowingFeeAmount;
+            info.fees.totalCostAmount;
 
         uint256 sizeDeltaEstimate = getIncreaseSizeDelta(
             info.position.numbers.sizeInTokens,
@@ -397,120 +382,143 @@ library DeltaConvergenceMath {
         uint256 sizeDeltaUsd,
         DeltaCalculationParameters memory values
     ) internal view returns (DecreasePositionResult memory result) {
-        PositionTokenBreakdown memory breakdown = getAccountMarketDelta(
+        // Get the minimum of the requested decrease amount and the actual position size.
+        result.sizeDeltaActualUsd = getSizeDeltaActualUsd(
             manager,
             values.account,
             values.marketAddress,
-            sizeDeltaUsd,
+            sizeDeltaUsd
+        );
+
+        IGmxV2PositionTypes.PositionInfo memory info = getPositionInfo(
+            manager,
+            values.account,
+            values.marketAddress,
+            result.sizeDeltaActualUsd,
             false
         );
 
-        // The total cost amount is equal to the sum of the fees associated with the decrease, in terms of the collateral token.
-        // This accounts for negative funding fees, borrowing fees,
-        uint256 collateralLostInDecrease = breakdown
-            .positionInfo
-            .fees
-            .totalCostAmount;
+        // No underflow because (result.sizeDeltaActualUsd / info.position.numbers.sizeInUsd) <= 1
+        uint256 shortSizeAfterTokens = info.position.numbers.sizeInTokens -
+            (info.position.numbers.sizeInTokens * result.sizeDeltaActualUsd) /
+            info.position.numbers.sizeInUsd;
 
-        {
-            uint256 profitInCollateralToken = SignedMath.abs(
-                breakdown.positionInfo.pnlAfterPriceImpactUsd
-            ) / values.longTokenPrice;
-
-            if (breakdown.positionInfo.pnlAfterPriceImpactUsd > 0) {
-                collateralLostInDecrease -= Math.min(
-                    collateralLostInDecrease,
-                    profitInCollateralToken
-                ); // Offset the loss in collateral with position profits.
-            } else {
-                collateralLostInDecrease += profitInCollateralToken; // adding because this variable is meant to represent a net loss in collateral.
-            }
-        }
-
-        uint256 sizeDeltaActual = Math.min(
-            sizeDeltaUsd,
-            breakdown.positionInfo.position.numbers.sizeInUsd
-        );
-
+        // Set the result execution price and long token price
+        result.executionPrice = info.executionPriceResult.executionPrice;
         result.positionSizeNextUsd =
-            breakdown.positionInfo.position.numbers.sizeInUsd -
-            sizeDeltaActual;
+            shortSizeAfterTokens *
+            values.longTokenPrice;
 
-        uint256 shortTokensAfterDecrease;
+        // Get the collateral cost and output in long token. One of these values will be zero.
+        (
+            uint256 collateralCostTokens,
+            uint256 outputTokens
+        ) = getDecreaseOrderCostsAndOutput(values.longTokenPrice, info);
 
-        {
-            uint256 proportionalDecrease = sizeDeltaActual.fractionToPercent(
-                breakdown.positionInfo.position.numbers.sizeInUsd
+        if (info.position.numbers.sizeInUsd > result.sizeDeltaActualUsd) {
+            // If the `totalCostAmount * longTokenPrice > pnlAfterPriceImpactUsd`,
+            // then collateral is used to pay for the difference.
+            // The collateral amount used to pay for this cost is calculated as follows:
+            // `(pnlAfterPriceImpactUsd - totalCostAmount * longTokenPrice) / longTokenPrice ~= collateral paid` (there are swap fees as well that aren't account for in this equation).
+            result.collateralToRemove =
+                info.position.numbers.collateralAmount -
+                Math.min(
+                    shortSizeAfterTokens,
+                    info.position.numbers.collateralAmount
+                );
+
+            result.collateralToRemove -= Math.min(
+                result.collateralToRemove,
+                collateralCostTokens
             );
 
-            shortTokensAfterDecrease =
-                breakdown.tokensShort -
-                breakdown
-                    .positionInfo
-                    .position
-                    .numbers
-                    .sizeInTokens
-                    .percentToFraction(proportionalDecrease);
-        }
+            // Set `collateralCostTokens` to zero since this is already account for in `result.collateralToRemove`.
+            collateralCostTokens = 0;
 
-        uint256 longTokensAfterDecrease = breakdown.tokensLong -
-            collateralLostInDecrease;
-
-        // This is the difference in long vs short tokens currently.
-        uint256 imbalance = Math.max(
-            shortTokensAfterDecrease,
-            longTokensAfterDecrease
-        ) - Math.min(shortTokensAfterDecrease, longTokensAfterDecrease);
-
-        if (shortTokensAfterDecrease < longTokensAfterDecrease) {
-            // We need to remove long tokens equivalent to the imbalance to make the position delta neutral.
-            // However, it is possible that there are a significant number of long tokens in the contract that are impacting the imbalance.
-            // If this is the case, then if we were to simply remove the imbalance, it can result in a position with very high leverage. Therefore, we will simply remove
-            // the minimum of `collateralAmount - collateralLostInDecrease` the difference in the longCollateral and shortTokens. The rest of the delta imbalance can be left to rebalancers.
-            uint256 remainingCollateral = breakdown
-                .positionInfo
-                .position
-                .numbers
-                .collateralAmount - collateralLostInDecrease;
-
-            if (remainingCollateral > shortTokensAfterDecrease) {
-                result.collateralToRemove = Math.min(
-                    remainingCollateral - shortTokensAfterDecrease,
-                    imbalance
-                );
+            // If there is no collateral to remove or no output tokens, return early.
+            if (result.collateralToRemove == 0 && outputTokens != 0) {
+                return result;
             }
+        } else {
+            // If full decrease, swap all collateral.
+            result.collateralToRemove = info.position.numbers.collateralAmount;
         }
 
-        if (result.collateralToRemove != 0) {
-            (uint256 expectedSwapOutput, , ) = manager
-                .gmxV2Reader()
-                .getSwapAmountOut(
-                    manager.gmxV2DataStore(),
-                    values.market,
-                    _makeMarketPrices(
-                        values.shortTokenPrice,
-                        values.longTokenPrice
-                    ),
-                    values.market.longToken,
-                    result.collateralToRemove,
-                    values.uiFeeReceiver
-                );
+        // The expected output of the position action accounts for:
+        // 1) The positions PnL
+        // 2) The negative funding fees of the position, which are first paid out from positive PnL,
+        // and then collateral if the PnL does not cover them
+        // 3) The collateral being removed to keep the position hedged.
 
-            result.estimatedOutputUsd =
-                expectedSwapOutput *
-                values.shortTokenPrice;
-        }
+        // All decrease actions target a leverage, of 1.0, not a delta of 1.0.
+        // This implies they do not take into account the balance of tokens of the account
+        // and / or the unclaimed/unsettled funding fees.
+        // In the event the accounts position is rebalancable, this action should be done swiftly.
+        // The reason for this is that if an account has a large token balance,
+        // it can result in a higher leveraged position if this was accounted for when deciding how to adjust a position's collateral.
+        // This must be avoided, and therefore, for any position action, the leverage of the position should converge to 0.
 
-        if (breakdown.positionInfo.pnlAfterPriceImpactUsd > 0) {
-            result.estimatedOutputUsd += SignedMath.abs(
-                breakdown.positionInfo.pnlAfterPriceImpactUsd
+        (uint256 expectedSwapOutput, , ) = manager
+            .gmxV2Reader()
+            .getSwapAmountOut(
+                manager.gmxV2DataStore(),
+                values.market,
+                _makeMarketPrices(
+                    values.shortTokenPrice,
+                    values.longTokenPrice
+                ),
+                values.market.longToken,
+                result.collateralToRemove + outputTokens - collateralCostTokens,
+                values.uiFeeReceiver
             );
+
+        result.estimatedOutputUsd = expectedSwapOutput * values.shortTokenPrice;
+
+        return result;
+    }
+
+    function getDecreaseOrderCostsAndOutput(
+        uint256 longTokenPrice,
+        IGmxV2PositionTypes.PositionInfo memory info
+    ) internal pure returns (uint256 collateralCost, uint256 outputAmount) {
+        uint256 collateralCostUSD = info
+            .executionPriceResult
+            .priceImpactDiffUsd;
+
+        // Increase collateral cost by the total fees.
+        collateralCostUSD += info.fees.totalCostAmount * longTokenPrice;
+
+        uint256 outputUSD;
+        if (info.executionPriceResult.priceImpactUsd < 0) {
+            // If price impact is negative, add impact to collateral cost.
+            collateralCostUSD += uint256(
+                -info.executionPriceResult.priceImpactUsd
+            );
+        } else {
+            // If price impact is positive, increase output usd by price impact.
+            outputUSD += uint256(info.executionPriceResult.priceImpactUsd);
         }
 
-        result.executionPrice = breakdown
-            .positionInfo
-            .executionPriceResult
-            .executionPrice;
+        if (info.basePnlUsd < 0) {
+            // If PNL is negative, add to collateral cost.
+            collateralCostUSD += uint256(-info.basePnlUsd);
+        } else {
+            // If PNL is positive, add it to output USD.
+            outputUSD += uint256(info.basePnlUsd);
+        }
+
+        if (collateralCostUSD > outputUSD) {
+            // If collateral cost exceeds output, offset collateral cost by output.
+            collateralCostUSD -= outputUSD;
+            outputUSD = 0;
+        } else {
+            // If output exceeds collateral cost, offset output by collateral cost.
+            outputUSD -= collateralCostUSD;
+            collateralCostUSD = 0;
+        }
+
+        // Return both collateral cost and output in long tokens.
+        return (collateralCostUSD / longTokenPrice, outputUSD / longTokenPrice);
     }
 
     /**
@@ -561,6 +569,24 @@ library DeltaConvergenceMath {
     ) internal pure returns (uint256 proportion, bool isShort) {
         // Get the direction of the position.
         isShort = shortPositionSizeTokens > longPositionSizeTokens;
+
+        // Max sure the denominator is not 0. If this is the case,
+        // then the delta proportion is the maximum that it can be in the direction of the numerator,
+        // as the position is completely unhedged on the opposing side.
+        if (
+            (isShort && longPositionSizeTokens == 0) ||
+            (!isShort && shortPositionSizeTokens == 0)
+        ) {
+            // If both the long position size and the short position size are 0,
+            // then the position is perfectly hedged.
+            if (longPositionSizeTokens == shortPositionSizeTokens) {
+                return (Constants.ONE_HUNDRED_PERCENT, false);
+            }
+
+            // Otherwise, the position is unhedged in the direction of the non-zero value,
+            // so return a max uint256 to denote this.
+            return (type(uint256).max, isShort);
+        }
 
         // Get the proportion of the position that is directional.
         proportion = (isShort)
@@ -656,13 +682,13 @@ library DeltaConvergenceMath {
         return _makeMarketPrices(shortTokenPrice, longTokenPrice);
     }
 
-    function _getPositionInfo(
+    function getPositionInfo(
         IGmxFrfStrategyManager manager,
         address account,
         address market,
         uint256 sizeDeltaUsd,
         bool useMaxSizeDelta
-    ) private view returns (IGmxV2PositionTypes.PositionInfo memory position) {
+    ) internal view returns (IGmxV2PositionTypes.PositionInfo memory position) {
         (address shortToken, address longToken) = GmxMarketGetters
             .getMarketTokens(manager.gmxV2DataStore(), market);
 
@@ -698,5 +724,49 @@ library DeltaConvergenceMath {
         );
 
         return position;
+    }
+
+    function getSizeDeltaActualUsd(
+        IGmxFrfStrategyManager manager,
+        address account,
+        address market,
+        uint256 sizeDeltaRequested
+    ) internal view returns (uint256 sizeDeltaActual) {
+        // Get the current size of the position.
+        uint256 currPositionSizeUSD = getPositionSizeUSD(
+            manager,
+            account,
+            market
+        );
+
+        // Return the minimum of the requested size delta or the position size.
+        return
+            (currPositionSizeUSD < sizeDeltaRequested)
+                ? currPositionSizeUSD
+                : sizeDeltaRequested;
+    }
+
+    function getPositionSizeUSD(
+        IGmxFrfStrategyManager manager,
+        address account,
+        address market
+    ) internal view returns (uint256 positionSizeUSD) {
+        (, address longToken) = GmxMarketGetters.getMarketTokens(
+            manager.gmxV2DataStore(),
+            market
+        );
+
+        bytes32 positionKey = PositionStoreUtils.getPositionKey(
+            account,
+            market,
+            longToken,
+            false
+        );
+
+        return
+            PositionStoreUtils.getPositionSizeUsd(
+                manager.gmxV2DataStore(),
+                positionKey
+            );
     }
 }

@@ -39,6 +39,8 @@ interface IGmxV2PositionTypes {
         uint256 shortTokenClaimableFundingAmountPerSize;
         uint256 increasedAtBlock;
         uint256 decreasedAtBlock;
+        uint256 increasedAtTime;
+        uint256 decreasedAtTime;
     }
 
     struct Flags {

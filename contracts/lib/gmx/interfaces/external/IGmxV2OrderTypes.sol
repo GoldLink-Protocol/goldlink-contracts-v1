@@ -39,6 +39,7 @@ interface IGmxV2OrderTypes {
     struct Addresses {
         address account;
         address receiver;
+        address cancellationReceiver;
         address callbackContract;
         address uiFeeReceiver;
         address market;
@@ -57,12 +58,14 @@ interface IGmxV2OrderTypes {
         uint256 callbackGasLimit;
         uint256 minOutputAmount;
         uint256 updatedAtBlock;
+        uint256 updatedAtTime;
     }
 
     struct Flags {
         bool isLong;
         bool shouldUnwrapNativeToken;
         bool isFrozen;
+        bool autoCancel;
     }
 
     struct CreateOrderParams {
@@ -72,11 +75,13 @@ interface IGmxV2OrderTypes {
         DecreasePositionSwapType decreasePositionSwapType;
         bool isLong;
         bool shouldUnwrapNativeToken;
+        bool autoCancel;
         bytes32 referralCode;
     }
 
     struct CreateOrderParamsAddresses {
         address receiver;
+        address cancellationReceiver;
         address callbackContract;
         address uiFeeReceiver;
         address market;
