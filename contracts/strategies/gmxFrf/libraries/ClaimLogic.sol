@@ -2,40 +2,11 @@
 
 pragma solidity 0.8.20;
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     IGmxFrfStrategyManager
 } from "../interfaces/IGmxFrfStrategyManager.sol";
 import { GmxStorageGetters } from "./GmxStorageGetters.sol";
 import { GmxMarketGetters } from "./GmxMarketGetters.sol";
-import {
-    IChainlinkAdapter
-} from "../../../adapters/chainlink/interfaces/IChainlinkAdapter.sol";
-import { IGmxV2DataStore } from "../interfaces/gmx/IGmxV2DataStore.sol";
-import {
-    IGmxV2OrderTypes
-} from "../../../lib/gmx/interfaces/external/IGmxV2OrderTypes.sol";
-import {
-    PositionStoreUtils
-} from "../../../lib/gmx/position/PositionStoreUtils.sol";
-import { Pricing } from "./Pricing.sol";
-import {
-    IGmxV2PositionTypes
-} from "../../../strategies/gmxFrf/interfaces/gmx/IGmxV2PositionTypes.sol";
-import { IMarketConfiguration } from "../interfaces/IMarketConfiguration.sol";
-import { Constants } from "../../../libraries/Constants.sol";
-import { PercentMath } from "../../../libraries/PercentMath.sol";
-import { OrderStoreUtils } from "../../../lib/gmx/order/OrderStoreUtils.sol";
-import { GmxFrfStrategyErrors } from "../GmxFrfStrategyErrors.sol";
-import { OrderValidation } from "./OrderValidation.sol";
-import {
-    IGmxFrfStrategyAccount
-} from "../interfaces/IGmxFrfStrategyAccount.sol";
-import { DeltaConvergenceMath } from "./DeltaConvergenceMath.sol";
 
 /**
  * @title ClaimLogic

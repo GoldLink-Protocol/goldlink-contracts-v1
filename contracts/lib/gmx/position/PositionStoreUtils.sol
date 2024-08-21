@@ -44,6 +44,10 @@ library PositionStoreUtils {
         keccak256(abi.encode("INCREASED_AT_BLOCK"));
     bytes32 public constant DECREASED_AT_BLOCK =
         keccak256(abi.encode("DECREASED_AT_BLOCK"));
+    bytes32 public constant INCREASED_AT_TIME =
+        keccak256(abi.encode("INCREASED_AT_TIME"));
+    bytes32 public constant DECREASED_AT_TIME =
+        keccak256(abi.encode("DECREASED_AT_TIME"));
 
     bytes32 public constant IS_LONG = keccak256(abi.encode("IS_LONG"));
 
@@ -121,6 +125,15 @@ library PositionStoreUtils {
         position.setDecreasedAtBlock(
             dataStore.getUint(keccak256(abi.encode(key, DECREASED_AT_BLOCK)))
         );
+
+        position.setIncreasedAtTime(
+            dataStore.getUint(keccak256(abi.encode(key, INCREASED_AT_TIME)))
+        );
+
+        position.setDecreasedAtTime(
+            dataStore.getUint(keccak256(abi.encode(key, DECREASED_AT_TIME)))
+        );
+
 
         position.setIsLong(
             dataStore.getBool(keccak256(abi.encode(key, IS_LONG)))

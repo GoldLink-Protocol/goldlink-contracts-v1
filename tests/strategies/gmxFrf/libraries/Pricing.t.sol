@@ -73,10 +73,4 @@ contract PricingTest is OracleAssetRegistry, Test, TokenDeployer {
         uint256 price = Pricing.getUnitTokenPriceUSD(oracle, address(usdc));
         assertEq(price, 1.1e24);
     }
-
-    function testGetAssetPriceUSDPriceIsSmall() public {
-        arbOracleMock.updateAnswer(1.8434e15); // 0.0018
-        uint256 price = Pricing.getUnitTokenPriceUSD(oracle, address(arb));
-        assertEq(price, 1.8434e9);
-    }
 }

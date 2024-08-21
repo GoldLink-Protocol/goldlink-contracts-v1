@@ -337,9 +337,11 @@ library OrderLogic {
                 marketConfig.orderPricingParameters.maxSwapSlippagePercent
             );
 
-        order.numbers.sizeDeltaUsd = sizeDeltaUsd;
+        order.numbers.sizeDeltaUsd = result.sizeDeltaActualUsd;
 
-        if (result.positionSizeNextUsd != 0 && sizeDeltaUsd != 0) {
+        if (
+            result.positionSizeNextUsd != 0 && order.numbers.sizeDeltaUsd != 0
+        ) {
             // Validate the order size. Only do this if remainingPositionSize != 0, since it may be impossible to
             // reduce the position size in the event the remaining size is less than the min order size.
             OrderValidation.validateOrderSize(

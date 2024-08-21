@@ -3,10 +3,7 @@
 pragma solidity 0.8.20;
 
 import { StrategyAccount } from "../../core/StrategyAccount.sol";
-import { IStrategyBank } from "../../interfaces/IStrategyBank.sol";
-import { StrategyBankHelpers } from "../../libraries/StrategyBankHelpers.sol";
 import { IStrategyController } from "../../interfaces/IStrategyController.sol";
-import { IStrategyAccount } from "../../interfaces/IStrategyAccount.sol";
 import {
     IGmxFrfStrategyManager
 } from "./interfaces/IGmxFrfStrategyManager.sol";
@@ -18,15 +15,8 @@ import {
 } from "../../lib/gmx/interfaces/external/IGmxV2OrderTypes.sol";
 import { GmxFrfStrategyErrors } from "./GmxFrfStrategyErrors.sol";
 import {
-    IGmxV2OrderCallbackReceiver
-} from "../../lib/gmx/interfaces/external/IGmxV2OrderCallbackReceiver.sol";
-import {
-    IGmxV2RoleStore
-} from "../../strategies/gmxFrf/interfaces/gmx/IGmxV2RoleStore.sol";
-import {
     IGmxV2EventUtilsTypes
 } from "../../lib/gmx/interfaces/external/IGmxV2EventUtilsTypes.sol";
-import { Role } from "../../lib/gmx/role/Role.sol";
 import { GmxStrategyStorage } from "./impl/GmxStrategyStorage.sol";
 import { AccountGetters } from "./libraries/AccountGetters.sol";
 import { LiquidationLogic } from "./libraries/LiquidationLogic.sol";
@@ -35,6 +25,7 @@ import { SwapCallbackLogic } from "./libraries/SwapCallbackLogic.sol";
 import { OrderLogic } from "./libraries/OrderLogic.sol";
 import { ClaimLogic } from "./libraries/ClaimLogic.sol";
 import { WithdrawalLogic } from "./libraries/WithdrawalLogic.sol";
+import { Validations } from "./libraries/Validations.sol";
 
 /**
  * @title GmxFrfStrategyAccount
@@ -64,14 +55,11 @@ contract GmxFrfStrategyAccount is
     /// @notice Ensure that `msg.value` is greater than or equal to the provided execution fee.
     /// This will not properly validate functions called via multicall, so additional logic must be used.
     modifier canPayFee(uint256 fee) {
-        require(
-            fee <= msg.value,
-            GmxFrfStrategyErrors.MSG_VALUE_LESS_THAN_PROVIDED_EXECUTION_FEE
-        );
+        _canPayFee(fee);
         _;
     }
 
-    /// @dev Require address is not zero.
+    /// @notice Require address is not zero.
     modifier onlyNonZeroAddress(address addressToCheck) {
         _onlyNonZeroAddress(addressToCheck);
         _;
@@ -600,11 +588,8 @@ contract GmxFrfStrategyAccount is
     function multicall(
         bytes[] calldata data
     ) public payable returns (bytes[] memory results) {
-        // Check that this is not a nested multicall.
-        require(
-            isInMulticall_ == 1,
-            GmxFrfStrategyErrors.NESTED_MULTICALLS_ARE_NOT_ALLOWED
-        );
+        // Verify not currently in a multicall, as nested multicalls are prohibited.
+        MulticallChecks.verifyNotInMultiCall(isInMulticall_);
 
         // Write to storage that we are currently executing a multicall to prevent nested multicalls.
         isInMulticall_ = 2;
@@ -618,24 +603,19 @@ contract GmxFrfStrategyAccount is
         // in a single multicall transaction without risking the caller being able to spend part of the contract's balance.
         uint256 minBalance = address(this).balance - msg.value;
 
-        results = new bytes[](data.length);
         uint256 dataLength = data.length;
-        for (uint256 i = 0; i < dataLength; i++) {
+        results = new bytes[](dataLength);
+        for (uint256 i = 0; i < dataLength; ++i) {
             (bool success, bytes memory result) = address(this).delegatecall(
                 data[i]
             );
 
-            MulticallChecks.checkMulticallResult(success, result);
+            MulticallChecks.verifyResult(success, result);
 
             results[i] = result;
         }
 
-        // Ensure that native token was not spent in excess of msg.value.
-        require(
-            address(this).balance >= minBalance,
-            GmxFrfStrategyErrors
-                .TOO_MUCH_NATIVE_TOKEN_SPENT_IN_MULTICALL_EXECUTION
-        );
+        MulticallChecks.verifyBalance(minBalance);
 
         // Reset the `isInMulticall` state to 1.
         isInMulticall_ = 1;
@@ -739,18 +719,15 @@ contract GmxFrfStrategyAccount is
     }
 
     function _onlyApprovedMarket(address market) internal view {
-        require(
-            MANAGER.isApprovedMarket(market),
-            GmxFrfStrategyErrors.GMX_FRF_STRATEGY_MARKET_DOES_NOT_EXIST
-        );
+        Validations.verifyApprovedMarket(MANAGER, market);
     }
 
     function _onlyControllerRole() internal view {
-        require(
-            MANAGER.gmxV2RoleStore().hasRole(msg.sender, Role.CONTROLLER),
-            GmxFrfStrategyErrors
-                .GMX_FRF_STRATEGY_ORDER_CALLBACK_RECEIVER_CALLER_MUST_HAVE_CONTROLLER_ROLE
-        );
+        Validations.verifyCallerIsController(MANAGER);
+    }
+
+    function _canPayFee(uint256 fee) internal view {
+        Validations.verifyCanPayFee(fee, msg.value);
     }
 
     /**

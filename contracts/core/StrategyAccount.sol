@@ -10,7 +10,6 @@ import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { Constants } from "../libraries/Constants.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { IStrategyController } from "../interfaces/IStrategyController.sol";
 import { IStrategyAccount } from "../interfaces/IStrategyAccount.sol";

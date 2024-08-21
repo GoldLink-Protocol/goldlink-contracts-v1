@@ -50,6 +50,7 @@ library OrderHelpers {
             IGmxV2OrderTypes.CreateOrderParamsAddresses({
                 receiver: address(this),
                 callbackContract: address(this),
+                cancellationReceiver: address(this),
                 uiFeeReceiver: uiFeeReceiver,
                 market: market,
                 initialCollateralToken: initialCollateralToken,

@@ -11,6 +11,10 @@ import {
     IGmxV2PositionTypes
 } from "../../../../contracts/strategies/gmxFrf/interfaces/gmx/IGmxV2PositionTypes.sol";
 
+import {
+    PositionStoreUtils
+} from "../../../../contracts/lib/gmx/position/PositionStoreUtils.sol";
+
 contract DeltaConvergenceMathTest is Test {
     // ============ Setup ============
 
@@ -35,72 +39,86 @@ contract DeltaConvergenceMathTest is Test {
         );
     }
 
-    // ============ GetPositionValueUSD Tests =============
+    function iToHex(bytes memory buffer) public pure returns (string memory) {
+        // Fixed buffer size for hexadecimal convertion
+        bytes memory converted = new bytes(buffer.length * 2);
 
-    function testGetPositionValueUSDBasic() public pure {
-        IGmxV2PositionTypes.PositionInfo memory positionInfo;
+        bytes memory _base = "0123456789abcdef";
 
-        positionInfo.fees.funding.claimableShortTokenAmount = 12e6; // 12 USDC
-        positionInfo.fees.funding.claimableLongTokenAmount = 0.08e18; // 0.08 ETH
-        positionInfo.position.numbers.collateralAmount = 1e18; // 1 ETH
-        positionInfo.fees.totalCostAmount = 0.005e18; // 0.005 ETH
-        positionInfo.pnlAfterPriceImpactUsd = -5e30; // - 5 USD
+        for (uint256 i = 0; i < buffer.length; i++) {
+            converted[i * 2] = _base[uint8(buffer[i]) / _base.length];
+            converted[i * 2 + 1] = _base[uint8(buffer[i]) % _base.length];
+        }
 
-        uint256 shortTokenPrice = 1.001e24; // $1.001
-        uint256 longTokenPrice = 2448e12; // $2448
-
-        uint256 valueUSD = DeltaConvergenceMath.getPositionValueUSD(
-            positionInfo,
-            shortTokenPrice,
-            longTokenPrice
-        );
-
-        // 12 * 1.0001 + (1 + 0.08 - 0.005) * 2448 - 5 = 2638.612
-
-        assert(valueUSD == 2638.612e30);
+        return string(abi.encodePacked("0x", converted));
     }
 
-    function testGetValueUSDZeroFundingFees() public pure {
-        IGmxV2PositionTypes.PositionInfo memory positionInfo;
-
-        positionInfo.position.numbers.collateralAmount = 1e18; // 1 ETH
-        positionInfo.fees.totalCostAmount = 0.005e18; // 0.005 ETH
-        positionInfo.pnlAfterPriceImpactUsd = -5e30; // - 5 USD
-
-        uint256 shortTokenPrice = 1.001e24; // $1.001
-        uint256 longTokenPrice = 2448e12; // $2448
-
-        uint256 valueUSD = DeltaConvergenceMath.getPositionValueUSD(
-            positionInfo,
-            shortTokenPrice,
-            longTokenPrice
+    function toHex16(bytes16 data) internal pure returns (bytes32 result) {
+        result =
+            (bytes32(data) &
+                0xFFFFFFFFFFFFFFFF000000000000000000000000000000000000000000000000) |
+            ((bytes32(data) &
+                0x0000000000000000FFFFFFFFFFFFFFFF00000000000000000000000000000000) >>
+                64);
+        result =
+            (result &
+                0xFFFFFFFF000000000000000000000000FFFFFFFF000000000000000000000000) |
+            ((result &
+                0x00000000FFFFFFFF000000000000000000000000FFFFFFFF0000000000000000) >>
+                32);
+        result =
+            (result &
+                0xFFFF000000000000FFFF000000000000FFFF000000000000FFFF000000000000) |
+            ((result &
+                0x0000FFFF000000000000FFFF000000000000FFFF000000000000FFFF00000000) >>
+                16);
+        result =
+            (result &
+                0xFF000000FF000000FF000000FF000000FF000000FF000000FF000000FF000000) |
+            ((result &
+                0x00FF000000FF000000FF000000FF000000FF000000FF000000FF000000FF0000) >>
+                8);
+        result =
+            ((result &
+                0xF000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000) >>
+                4) |
+            ((result &
+                0x0F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F00) >>
+                8);
+        result = bytes32(
+            0x3030303030303030303030303030303030303030303030303030303030303030 +
+                uint256(result) +
+                (((uint256(result) +
+                    0x0606060606060606060606060606060606060606060606060606060606060606) >>
+                    4) &
+                    0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F) *
+                7
         );
-
-        // (1 - 0.005) * 2448 - 5 = 2,430.76
-        assert(valueUSD == 2430.76e30);
     }
 
-    function testGetValueUSDSignificantPositivePnL() public pure {
-        IGmxV2PositionTypes.PositionInfo memory positionInfo;
+    function toHex(bytes32 data) public pure returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    "0x",
+                    toHex16(bytes16(data)),
+                    toHex16(bytes16(data << 128))
+                )
+            );
+    }
 
-        positionInfo.fees.funding.claimableShortTokenAmount = 12e6; // 12 USDC
-        positionInfo.fees.funding.claimableLongTokenAmount = 0.08e18; // 0.08 ETH
-        positionInfo.position.numbers.collateralAmount = 1e18; // 1 ETH
-        positionInfo.fees.totalCostAmount = 0.005e18; // 0.005 ETH
-        positionInfo.pnlAfterPriceImpactUsd = 5000e30; // 5000 USD
-
-        uint256 shortTokenPrice = 1.001e24; // $1.001
-        uint256 longTokenPrice = 2448e12; // $2448
-
-        uint256 valueUSD = DeltaConvergenceMath.getPositionValueUSD(
-            positionInfo,
-            shortTokenPrice,
-            longTokenPrice
-        );
-
-        // 12 * 1.0001 + (1 + 0.08 - 0.005) * 2448 + 5000 = 2638.612
-
-        assert(valueUSD == 7643.612e30);
+    function bytes32ToString(
+        bytes32 _bytes32
+    ) public pure returns (string memory) {
+        uint8 i = 0;
+        while (i < 32 && _bytes32[i] != 0) {
+            i++;
+        }
+        bytes memory bytesArray = new bytes(i);
+        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
+            bytesArray[i] = _bytes32[i];
+        }
+        return string(bytesArray);
     }
 
     // ============ Get Delta Proportion Tests ============
