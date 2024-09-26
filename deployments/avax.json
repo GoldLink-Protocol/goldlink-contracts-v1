@@ -1,0 +1,11 @@
+{
+    "StrategyController": "0xB7405a8fe179A7969BD44f85F3187058C2a94667",
+    "StrategyBank": "0xfDE38dE56442125A6AB810549001662450DBf671",
+    "StrategyReserve": "0xbE6eB54D1e96CC59338BE9A281d840AcE82df095",
+    "StrategyAccountDeployer": "0x3B540CD71b934D7Ce0fD10487ef5de7C62428a18",
+    "TransparentUpgradeableProxy": "0xd40C465F6E87A22EC9A58fe51Bb06D0babE52Fdd",
+    "ProxyAdmin": "0x50Ca3809e2491A2d9C25F1660c58657982C0325B",
+    "GmxFrfStrategyManager": "0x55fdb45CC7A9296022DEf1cfd5D3B64E575B5301",
+    "UpgradeableBeacon": "0x492d60ea7834C2DAfB4f22bf320b6078b12E1082",
+    "GmxFrfStrategyAccount": "0xafe4897f959ab47b89b6229e5e1e81a29adcfa0b"
+}
