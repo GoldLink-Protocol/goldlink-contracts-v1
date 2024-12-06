@@ -59,41 +59,54 @@ library Order {
         props.addresses.callbackContract = value;
     }
 
-
     // @dev the order updatedAtTime
     // @param props Props
     // @return the order updatedAtTime
-    function updatedAtTime(IGmxV2OrderTypes.Props memory props) internal pure returns (uint256) {
+    function updatedAtTime(
+        IGmxV2OrderTypes.Props memory props
+    ) internal pure returns (uint256) {
         return props.numbers.updatedAtTime;
     }
 
     // @dev set the order updatedAtTime
     // @param props Props
     // @param value the value to set to
-    function setUpdatedAtTime(IGmxV2OrderTypes.Props memory props, uint256 value) internal pure {
+    function setUpdatedAtTime(
+        IGmxV2OrderTypes.Props memory props,
+        uint256 value
+    ) internal pure {
         props.numbers.updatedAtTime = value;
     }
 
-    function autoCancel(IGmxV2OrderTypes.Props memory props) internal pure returns (bool) {
+    function autoCancel(
+        IGmxV2OrderTypes.Props memory props
+    ) internal pure returns (bool) {
         return props.flags.autoCancel;
     }
 
-    function setAutoCancel(IGmxV2OrderTypes.Props memory props, bool value) internal pure {
+    function setAutoCancel(
+        IGmxV2OrderTypes.Props memory props,
+        bool value
+    ) internal pure {
         props.flags.autoCancel = value;
     }
-
 
     // @dev get the cancellationReceiver
     // @param props Props
     // @param value the value to set to
-    function cancellationReceiver(IGmxV2OrderTypes.Props memory props) internal pure returns (address) {
+    function cancellationReceiver(
+        IGmxV2OrderTypes.Props memory props
+    ) internal pure returns (address) {
         return props.addresses.cancellationReceiver;
     }
 
     // @dev set the order cancellationReceiver
     // @param props Props
     // @param value the value to set to
-    function setCancellationReceiver(IGmxV2OrderTypes.Props memory props, address value) internal pure {
+    function setCancellationReceiver(
+        IGmxV2OrderTypes.Props memory props,
+        address value
+    ) internal pure {
         props.addresses.cancellationReceiver = value;
     }
 
@@ -338,23 +351,23 @@ library Order {
         props.numbers.minOutputAmount = value;
     }
 
-    // @dev the order updatedAtBlock
+    // @dev the order validFromTime
     // @param props Props
-    // @return the order updatedAtBlock
-    function updatedAtBlock(
+    // @return the order validFromTime
+    function validFromTime(
         IGmxV2OrderTypes.Props memory props
     ) internal pure returns (uint256) {
-        return props.numbers.updatedAtBlock;
+        return props.numbers.validFromTime;
     }
 
-    // @dev set the order updatedAtBlock
+    // @dev set the order validFromTime
     // @param props Props
     // @param value the value to set to
-    function setUpdatedAtBlock(
+    function setValidFromTime(
         IGmxV2OrderTypes.Props memory props,
         uint256 value
     ) internal pure {
-        props.numbers.updatedAtBlock = value;
+        props.numbers.validFromTime = value;
     }
 
     // @dev whether the order is for a long or short

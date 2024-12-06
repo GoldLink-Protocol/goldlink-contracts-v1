@@ -134,7 +134,7 @@ contract GmxFrfExecuteCreateIncreaseOrderTest is MockAccountHelpers {
     }
 
     function testExecuteCreateIncreaseOrderSwapSlippageTooHigh() public {
-        ETH_USD_ORACLE_MOCK.updateAnswer(500e8);
+        ETH_USD_ORACLE_MOCK.updateAnswer(200000e8);
         _expectRevert(
             GmxFrfStrategyErrors.ORDER_VALIDATION_SWAP_SLIPPAGE_IS_TOO_HGIH
         );

@@ -90,7 +90,7 @@ abstract contract GmxFrfStrategyMetadata {
 
     // GMX Deployment Addresses
     IGmxV2ExchangeRouter constant GMX_EXCHANGE_ROUTER =
-        IGmxV2ExchangeRouter(0x69C527fC77291722b52649E45c838e41be8Bf5d5);
+        IGmxV2ExchangeRouter(0x900173A66dbD345006C51fA35fA3aB760FcD843b);
     IGmxV2Reader constant GMX_READER =
         IGmxV2Reader(0x5Ca84c34a381434786738735265b9f3FD814b824);
     IGmxV2DataStore constant GMX_DATASTORE =
@@ -102,14 +102,14 @@ abstract contract GmxFrfStrategyMetadata {
     address constant GMX_ORDER_VAULT =
         0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5;
     IOrderHandler GMX_ORDER_HANDLER =
-        IOrderHandler(0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee);
+        IOrderHandler(0xe68CAAACdf6439628DFD2fe624847602991A31eB);
 
     // GMX Keeper Signer Address
     address constant GMX_ORACLE_SIGNER =
         0xC539cB358a58aC67185BaAD4d5E3f7fCfc903700;
 
     address constant GMX_CONTROLLER =
-        0xB0Fc2a48b873da40e7bc25658e5E6137616AC2Ee;
+        0xe68CAAACdf6439628DFD2fe624847602991A31eB;
 
     address constant MSIG = 0x62dF56DcEaaFEcBbb57D595E8Cf0b90cA437e77d;
 

@@ -24,7 +24,8 @@ library OrderStoreUtils {
     bytes32 public constant RECEIVER = keccak256(abi.encode("RECEIVER"));
     bytes32 public constant CALLBACK_CONTRACT =
         keccak256(abi.encode("CALLBACK_CONTRACT"));
-    bytes32 public constant CANCELLATION_RECEIVER =  keccak256(abi.encode("CANCELLATION_RECEIVER"));
+    bytes32 public constant CANCELLATION_RECEIVER =
+        keccak256(abi.encode("CANCELLATION_RECEIVER"));
     bytes32 public constant UI_FEE_RECEIVER =
         keccak256(abi.encode("UI_FEE_RECEIVER"));
     bytes32 public constant MARKET = keccak256(abi.encode("MARKET"));
@@ -49,10 +50,10 @@ library OrderStoreUtils {
         keccak256(abi.encode("CALLBACK_GAS_LIMIT"));
     bytes32 public constant MIN_OUTPUT_AMOUNT =
         keccak256(abi.encode("MIN_OUTPUT_AMOUNT"));
-    bytes32 public constant UPDATED_AT_BLOCK =
-        keccak256(abi.encode("UPDATED_AT_BLOCK"));
-    bytes32 public constant UPDATED_AT_TIME = keccak256(abi.encode("UPDATED_AT_TIME"));
-
+    bytes32 public constant VALID_FROM_TIME =
+        keccak256(abi.encode("VALID_FROM_TIME"));
+    bytes32 public constant UPDATED_AT_TIME =
+        keccak256(abi.encode("UPDATED_AT_TIME"));
 
     bytes32 public constant IS_LONG = keccak256(abi.encode("IS_LONG"));
     bytes32 public constant SHOULD_UNWRAP_NATIVE_TOKEN =
@@ -86,8 +87,6 @@ library OrderStoreUtils {
         order.setUiFeeReceiver(
             dataStore.getAddress(keccak256(abi.encode(key, UI_FEE_RECEIVER)))
         );
-
-
 
         order.setMarket(
             dataStore.getAddress(keccak256(abi.encode(key, MARKET)))
@@ -144,21 +143,27 @@ library OrderStoreUtils {
         );
 
         order.setCancellationReceiver(
-            dataStore.getAddress(keccak256(abi.encode(key, CANCELLATION_RECEIVER)))
+            dataStore.getAddress(
+                keccak256(abi.encode(key, CANCELLATION_RECEIVER))
+            )
         );
 
         order.setMinOutputAmount(
             dataStore.getUint(keccak256(abi.encode(key, MIN_OUTPUT_AMOUNT)))
         );
 
-        order.setUpdatedAtBlock(
-            dataStore.getUint(keccak256(abi.encode(key, UPDATED_AT_BLOCK)))
+        order.setValidFromTime(
+            dataStore.getUint(keccak256(abi.encode(key, VALID_FROM_TIME)))
         );
 
-        order.setUpdatedAtTime(dataStore.getUint(keccak256(abi.encode(key, UPDATED_AT_TIME))));
+        order.setUpdatedAtTime(
+            dataStore.getUint(keccak256(abi.encode(key, UPDATED_AT_TIME)))
+        );
 
         order.setIsLong(dataStore.getBool(keccak256(abi.encode(key, IS_LONG))));
-        order.setAutoCancel(dataStore.getBool(keccak256(abi.encode(key, AUTO_CANCEL))));
+        order.setAutoCancel(
+            dataStore.getBool(keccak256(abi.encode(key, AUTO_CANCEL)))
+        );
 
         order.setShouldUnwrapNativeToken(
             dataStore.getBool(
