@@ -27,10 +27,12 @@ contract UpgradeStrategy is Script {
         );
 
         address updatedLogic = address(new GmxFrfStrategyAccount(manager));
-        UpgradeableBeacon beacon = UpgradeableBeacon(
-            0x98E27951E80ba7ab480c8e352e1d605AcF01B1Af
-        );
-        beacon.upgradeTo(updatedLogic);
+
+        console.log(updatedLogic);
+        // UpgradeableBeacon beacon = UpgradeableBeacon(
+        //     0x98E27951E80ba7ab480c8e352e1d605AcF01B1Af
+        // );
+        // beacon.upgradeTo(updatedLogic);
         vm.stopBroadcast();
     }
 }
